@@ -467,4 +467,85 @@ class DatabaseService implements FavoriteRepository {
     return rows.first['id'] as int;
   }
 
+  /// Enregistre un nouvel utilisateur dans la base SQLite.
+  ///
+  /// Cette méthode reçoit les informations nécessaires à la création
+  /// d'un compte puis les enregistre dans la table `users`.
+  ///
+  /// Le mot de passe doit déjà être transformé en hash avant
+  /// d'arriver dans cette méthode.
+  ///
+  /// Retourne l'identifiant SQLite du nouvel utilisateur.
+  Future<int> insertUser({
+    required String username,
+    required String email,
+    required String passwordHash,
+  }) async {
+    // Récupère la connexion à la base SQLite.
+    final db = await database;
+
+    // Prépare les données correspondant aux colonnes
+    // de la table `users`.
+    final values = {
+      'username': username,
+      'email': email,
+      'password_hash': passwordHash,
+      'created_at': DateTime.now().toIso8601String(),
+    };
+
+    // Insère le nouvel utilisateur dans SQLite.
+    //
+    // La méthode retourne automatiquement l'identifiant
+    // généré par SQLite grâce à AUTOINCREMENT.
+    return await db.insert(
+      'users',
+      values,
+    );
+  }
+
+  /// Recherche un utilisateur à partir de son nom d'utilisateur.
+  ///
+  /// Cette méthode récupère les informations nécessaires
+  /// pour vérifier les identifiants lors de la connexion.
+  ///
+  /// Retourne :
+  /// - une Map contenant les données de l'utilisateur si celui-ci existe ;
+  /// - null si aucun utilisateur ne correspond.
+  Future<Map<String, dynamic>?> getUserByUsername(
+      String username,
+      ) async {
+    // Récupère la connexion à la base SQLite.
+    final db = await database;
+
+    // Recherche l'utilisateur correspondant au username.
+    final rows = await db.query(
+      'users',
+
+      // Nous récupérons uniquement les données
+      // nécessaires à l'authentification.
+      columns: [
+        'id',
+        'username',
+        'email',
+        'password_hash',
+      ],
+
+      // Le ? sera remplacé par le username.
+      where: 'username = ?',
+
+      // Valeur utilisée pour remplacer le ?.
+      whereArgs: [username],
+
+      // Un username correspond à un seul utilisateur.
+      limit: 1,
+    );
+
+    // Aucun utilisateur trouvé.
+    if (rows.isEmpty) {
+      return null;
+    }
+
+    // Retourne les données du premier utilisateur trouvé.
+    return rows.first;
+  }
 }

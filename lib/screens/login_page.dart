@@ -1,6 +1,8 @@
 import 'package:flutter/material.dart';
+import 'package:recettescarnet/screens/registration_page.dart';
 
 import '../providers/user_session.dart';
+import '../services/password_service.dart';
 import 'home_page.dart';
 import 'package:recettescarnet/services/database_service.dart';
 
@@ -808,10 +810,23 @@ class _LoginPageState extends State<LoginPage> {
   // ACTION : CONNEXION
   // ============================================================
 
-  Future<void> _login() async  {
+  /// Vérifie les identifiants de l'utilisateur.
+  ///
+  /// Cette méthode :
+  ///
+  /// 1. récupère le nom d'utilisateur et le mot de passe saisis ;
+  /// 2. vérifie que les champs sont renseignés ;
+  /// 3. recherche l'utilisateur dans SQLite ;
+  /// 4. récupère son mot de passe haché ;
+  /// 5. vérifie le mot de passe avec PasswordService ;
+  /// 6. crée la session utilisateur ;
+  /// 7. redirige vers la page d'accueil si les identifiants sont valides.
+  Future<void> _login() async {
+    // Récupère le nom d'utilisateur saisi.
     final String username =
     _usernameController.text.trim();
 
+    // Récupère le mot de passe saisi.
     final String password =
     _passwordController.text.trim();
 
@@ -819,6 +834,7 @@ class _LoginPageState extends State<LoginPage> {
     // VALIDATION
     // ----------------------------------------------------------
 
+    // Vérifie que les deux champs sont renseignés.
     if (username.isEmpty ||
         password.isEmpty) {
       _showMessage(
@@ -829,66 +845,83 @@ class _LoginPageState extends State<LoginPage> {
     }
 
     // ----------------------------------------------------------
-    // COMPTE DE DÉMONSTRATION LOCAL
-    // ----------------------------------------------------------
-    //
-    // Pour le moment, Firebase n'est volontairement
-    // pas utilisé.
-    //
-    // Le compte de démonstration est :
-    //
-    // Nom d'utilisateur : admin
-    // Mot de passe       : admin123
-    //
-    // Cette partie sera remplacée plus tard par notre
-    // authentification réelle.
+    // RECHERCHE DE L'UTILISATEUR
     // ----------------------------------------------------------
 
-    if (username == 'admin' &&
-        password == 'admin123') {
-      // Recherche de l'utilisateur dans SQLite.
-      final userId =
-      await DatabaseService.instance
-          .getUserIdByUsername(username);
-      if (!mounted) {
-        return;
-      }
+    // Recherche l'utilisateur directement dans SQLite
+    // à partir de son nom d'utilisateur.
+    final user =
+    await DatabaseService.instance
+        .getUserByUsername(username);
 
-      // Sécurité : l'utilisateur doit réellement
-      // exister dans la base de données.
-      if (userId == null) {
-        _showMessage(
-          'Utilisateur introuvable dans la base de données.',
-        );
-        return;
-      }
+    // Vérifie que la page existe toujours après
+    // l'opération asynchrone.
+    if (!mounted) {
+      return;
+    }
 
-      // On mémorise maintenant l'ID réel récupéré
-      // depuis SQLite.
-      // UserSession.instance.setUser(userId);
-      UserSession.instance.setUser(
-        userId: userId,
-        username: username,
-      );
-
-      Navigator.of(context).pushReplacement(
-        MaterialPageRoute(
-          builder: (context) => const HomePage(),
-        ),
+    // Si aucun utilisateur n'a été trouvé,
+    // les identifiants sont considérés comme incorrects.
+    if (user == null) {
+      _showMessage(
+        'Nom d’utilisateur ou mot de passe incorrect.',
       );
 
       return;
     }
 
     // ----------------------------------------------------------
-    // IDENTIFIANTS INCORRECTS
+    // VÉRIFICATION DU MOT DE PASSE
     // ----------------------------------------------------------
 
-    _showMessage(
-      'Nom d’utilisateur ou mot de passe incorrect.',
+    // Récupère le mot de passe haché stocké dans SQLite.
+    final String passwordHash =
+    user['password_hash'] as String;
+
+    // Vérifie le mot de passe saisi avec le hash
+    // enregistré dans la base.
+    final bool passwordIsValid =
+    PasswordService.instance.verifyPassword(
+      password,
+      passwordHash,
+    );
+
+    // Le mot de passe ne correspond pas.
+    if (!passwordIsValid) {
+      _showMessage(
+        'Nom d’utilisateur ou mot de passe incorrect.',
+      );
+
+      return;
+    }
+
+    // ----------------------------------------------------------
+    // SESSION UTILISATEUR
+    // ----------------------------------------------------------
+
+    // Récupère l'identifiant SQLite de l'utilisateur.
+    final int userId =
+    user['id'] as int;
+
+    // Enregistre l'utilisateur actuellement connecté
+    // dans UserSession.
+    UserSession.instance.setUser(
+      userId: userId,
+      username: username,
+    );
+
+    // ----------------------------------------------------------
+    // REDIRECTION
+    // ----------------------------------------------------------
+
+    // L'authentification est réussie :
+    // nous ouvrons la page d'accueil.
+    Navigator.of(context).pushReplacement(
+      MaterialPageRoute(
+        builder: (context) => const HomePage(),
+      ),
     );
   }
-
   // ============================================================
   // ACTION : GOOGLE
   // ============================================================
@@ -915,12 +948,15 @@ class _LoginPageState extends State<LoginPage> {
   // ACTION : CREER UN COMPTE
   // ============================================================
 
+  /// Ouvre la page d'inscription afin de permettre
+  /// à l'utilisateur de créer un nouveau compte.
   void _createAccount() {
-    _showMessage(
-      'La page de création de compte sera disponible prochainement.',
+    Navigator.of(context).push(
+      MaterialPageRoute(
+        builder: (context) => const RegistrationPage(),
+      ),
     );
   }
-
   // ============================================================
   // MESSAGE
   // ============================================================
