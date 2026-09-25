@@ -385,19 +385,19 @@ class _RecipeDetailPageState extends State<RecipeDetailPage> {
     );
   }
 
-  /// Affichage utilisé lorsque l'image de la recette
-  /// n'est pas disponible.
+
+  /// Affiche l'image locale de secours lorsque l'image distante
+  /// de la recette n'est pas disponible.
+  ///
+  /// Cette image permet de conserver une présentation cohérente
+  /// lorsque l'application est utilisée sans connexion Internet.
   Widget _buildImagePlaceholder() {
-    return Container(
+    return Image.asset(
+      'assets/images/favorite_recipe_offline.png',
       width: double.infinity,
       height: 320,
-      color: AppColors.lightGray,
-      alignment: Alignment.center,
-      child: const Icon(
-        Icons.restaurant,
-        size: 64,
-        color: AppColors.gray,
-      ),
+      fit: BoxFit.cover,
     );
   }
+
 }

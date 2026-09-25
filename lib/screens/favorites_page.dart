@@ -136,19 +136,29 @@ class _FavoritesPageState extends State<FavoritesPage> {
                             width: 90,
                             height: 90,
                             fit: BoxFit.cover,
+
+                            // Affiche l'image locale par défaut
+                            // si l'image distante ne peut pas être chargée.
+                            errorBuilder: (
+                                context,
+                                error,
+                                stackTrace,
+                                ) {
+                              return Image.asset(
+                                'assets/images/favorite_recipe_offline.png',
+                                width: 90,
+                                height: 90,
+                                fit: BoxFit.cover,
+                              );
+                            },
                           )
-                              : Container(
+                              : Image.asset(
+                            'assets/images/favorite_recipe_offline.png',
                             width: 90,
                             height: 90,
-                            color: AppColors.lightGray,
-                            child: const Icon(
-                              Icons.restaurant,
-                              size: 40,
-                              color: AppColors.primary,
-                            ),
+                            fit: BoxFit.cover,
                           ),
                         ),
-
                         const SizedBox(width: 14),
 
                         // ----------------------------------------------------------
